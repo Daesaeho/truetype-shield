@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.0
+
+- Warn once per game session when TrueType Shield skips a resource-pack font.
+- Add a client and project icon.
+- License new TrueType Shield releases under All Rights Reserved.
+
 ## 1.1.0
 
 - Extend the 1.21.x build to every stable release from 1.21 through 1.21.11.

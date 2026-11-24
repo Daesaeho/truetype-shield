@@ -54,4 +54,5 @@ tasks.withType(AbstractArchiveTask).configureEach {
 
 jar {
     from('LICENSE')
+    from('LICENSE-LUCIDE')
 }
