@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "truetype_shield",
+  "version": "${version}",
+  "name": "TrueType Shield",
+  "description": "Blocks TrueType resource-pack fonts before Minecraft can open them, mitigating the minecraft2shell font attack.",
+  "license": "MIT",
+  "environment": "client",
+  "contact": {
+    "sources": "https://github.com/Daesaeho/truetype-shield",
+    "issues": "https://github.com/Daesaeho/truetype-shield/issues"
+  },
+  "mixins": ["truetype_shield.mixins.json"],
+  "depends": {
+    "fabricloader": ">=${loaderVersion}",
+    "minecraft": ["${minecraftVersions}"],
+    "java": ">=${javaVersion}"
+  }
+}

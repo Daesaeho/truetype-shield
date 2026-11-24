@@ -1,0 +1,57 @@
+plugins {
+    id 'net.fabricmc.fabric-loom' version '1.18.4' apply false
+    id 'net.fabricmc.fabric-loom-remap' version '1.18.4' apply false
+}
+
+def target = providers.gradleProperty('target').getOrElse('26.x')
+def targets = [
+    '1.21.11': [java: 21, versions: ['1.21.11']],
+    '26.x': [java: 25, versions: ['26.1', '26.1.1', '26.1.2', '26.2', '26.3', '26.4-pre.1']]
+]
+if (!targets.containsKey(target)) {
+    throw new GradleException("Unknown target '${target}'. Use 1.21.11 or 26.x.")
+}
+
+def spec = targets[target]
+def legacy = target == '1.21.11'
+apply plugin: legacy ? 'net.fabricmc.fabric-loom-remap' : 'net.fabricmc.fabric-loom'
+
+group = 'io.github.daesaeho'
+version = "${mod_version}+${target}"
+
+dependencies {
+    minecraft "com.mojang:minecraft:${spec.versions.first()}"
+    if (legacy) {
+        mappings loom.officialMojangMappings()
+        modImplementation "net.fabricmc:fabric-loader:${loader_version}"
+    } else {
+        implementation "net.fabricmc:fabric-loader:${loader_version}"
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = spec.java
+    options.encoding = 'UTF-8'
+}
+
+processResources {
+    def metadata = [
+        version: version.toString(),
+        javaVersion: spec.java,
+        loaderVersion: loader_version,
+        minecraftVersions: spec.versions.collect { "=${it}" }.join('", "')
+    ]
+    inputs.properties metadata
+    filesMatching('fabric.mod.json') {
+        expand metadata
+    }
+}
+
+tasks.withType(AbstractArchiveTask).configureEach {
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+}
+
+jar {
+    from('LICENSE')
+}

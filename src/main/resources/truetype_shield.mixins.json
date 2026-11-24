@@ -1,0 +1,9 @@
+{
+  "required": true,
+  "minVersion": "0.8.7",
+  "package": "io.github.daesaeho.truetypeshield.mixin",
+  "client": ["TrueTypeGlyphProviderMixin"],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
