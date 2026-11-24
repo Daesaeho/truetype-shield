@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.5.0
+
+- Add NeoForge builds for stable Minecraft 26.x and the 1.21.x release line.
+- Add an optional Fabric Mod Menu settings entry.
+
+## 1.4.0
+
+- Scan installed local packs at startup for outline fonts and known minecraft2shell font fingerprints.
+- Add a Font settings screen with a startup scan toggle and a manual scan.
+
+## 1.3.0
+
+- Add a Fabric build for every stable Minecraft 1.20.x release.
+- Run packaged font-provider regression tests across all three Fabric build targets.
+
 ## 1.2.0
 
 - Warn once per game session when TrueType Shield skips a resource-pack font.

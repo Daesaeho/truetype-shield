@@ -13,17 +13,42 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        target: ['1.21.x', '26.x']
+        target: ['1.20.x', '1.21.x', '26.x']
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: '25'
+          java-version: |
+            17
+            25
       - uses: gradle/actions/setup-gradle@v5
-      - run: ./gradlew build -Ptarget=${{ matrix.target }}
+      - run: ./gradlew build fontGuardRegression -Ptarget=${{ matrix.target }} -Porg.gradle.java.installations.fromEnv=JAVA_HOME_17_X64
       - uses: actions/upload-artifact@v6
         with:
           name: truetype-shield-${{ matrix.target }}
           path: build/libs/*.jar
+          if-no-files-found: error
+
+  neoforge:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - target: '26.x'
+            java: '25'
+          - target: '1.21.x'
+            java: '21'
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+      - uses: gradle/actions/setup-gradle@v5
+      - run: ./gradlew -p neoforge build -Ptarget=${{ matrix.target }}
+      - uses: actions/upload-artifact@v6
+        with:
+          name: truetype-shield-neoforge-${{ matrix.target }}
+          path: neoforge/build/libs/*.jar
           if-no-files-found: error

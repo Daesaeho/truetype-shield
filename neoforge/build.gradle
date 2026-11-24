@@ -1,0 +1,61 @@
+plugins {
+    id 'java-library'
+    id 'net.neoforged.moddev' version '2.0.148'
+}
+
+def target = providers.gradleProperty('target').getOrElse('26.x')
+def targets = [
+    '26.x': [java: 25, neo: '26.3.0.115', minecraft: '[26.1],[26.1.1],[26.1.2],[26.2],[26.3]', loader: '[26.1.0.19-beta,)'],
+    '1.21.x': [java: 21, neo: '21.11.48', minecraft: '[1.21],[1.21.1],[1.21.2],[1.21.3],[1.21.4],[1.21.5],[1.21.6],[1.21.7],[1.21.8],[1.21.9],[1.21.10],[1.21.11]', loader: '[21.0.167,)']
+]
+if (!targets.containsKey(target)) {
+    throw new GradleException("Unknown NeoForge target '${target}'. Use 26.x or 1.21.x.")
+}
+def spec = targets[target]
+def sharedVersion = new Properties()
+file('../gradle.properties').withReader { sharedVersion.load(it) }
+
+group = 'io.github.daesaeho'
+version = "${sharedVersion.getProperty('mod_version')}+neoforge.${target}"
+
+sourceSets {
+    main {
+        java.srcDir('../src/main/java')
+        java.srcDir(target == '26.x' ? '../src/fabricModern/java' : '../src/fabricLegacy/java')
+        resources.srcDir('../src/main/resources')
+        resources.exclude('fabric.mod.json')
+    }
+}
+
+neoForge {
+    version = spec.neo
+    runs {
+        client {
+            client()
+        }
+    }
+    mods {
+        truetype_shield {
+            sourceSet(sourceSets.main)
+        }
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = spec.java
+    options.encoding = 'UTF-8'
+}
+
+processResources {
+    def metadata = [modVersion: version.toString(), minecraftVersions: spec.minecraft, neoLoader: spec.loader]
+    inputs.properties(metadata)
+    filesMatching('META-INF/neoforge.mods.toml') {
+        expand(metadata)
+    }
+}
+
+jar {
+    from('../LICENSE', '../LICENSE-LUCIDE')
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+}

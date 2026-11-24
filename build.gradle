@@ -5,27 +5,37 @@ plugins {
 
 def target = providers.gradleProperty('target').getOrElse('26.x')
 def targets = [
-    '1.21.x': [java: 21, compileVersion: '1.21.11', versions: ['1.21'] + (1..11).collect { "1.21.${it}" }],
-    '26.x': [java: 25, compileVersion: '26.1', versions: ['26.1', '26.1.1', '26.1.2', '26.2', '26.3', '26.4-pre.1']]
+    '1.20.x': [java: 17, compileVersion: '1.20.1', modMenu: '7.2.2', versions: ['1.20'] + (1..6).collect { "1.20.${it}" }],
+    '1.21.x': [java: 21, compileVersion: '1.21.11', modMenu: '17.0.1', versions: ['1.21'] + (1..11).collect { "1.21.${it}" }],
+    '26.x': [java: 25, compileVersion: '26.1', modMenu: '18.0.2', versions: ['26.1', '26.1.1', '26.1.2', '26.2', '26.3', '26.4-pre.1']]
 ]
 if (!targets.containsKey(target)) {
-    throw new GradleException("Unknown target '${target}'. Use 1.21.x or 26.x.")
+    throw new GradleException("Unknown target '${target}'. Use 1.20.x, 1.21.x, or 26.x.")
 }
 
 def spec = targets[target]
-def legacy = target == '1.21.x'
+def legacy = target != '26.x'
 apply plugin: legacy ? 'net.fabricmc.fabric-loom-remap' : 'net.fabricmc.fabric-loom'
 
 group = 'io.github.daesaeho'
 version = "${mod_version}+${target}"
+
+repositories {
+    maven {
+        url = 'https://maven.terraformersmc.com/releases/'
+        content { includeModule('com.terraformersmc', 'modmenu') }
+    }
+}
 
 dependencies {
     minecraft "com.mojang:minecraft:${spec.compileVersion}"
     if (legacy) {
         mappings loom.officialMojangMappings()
         modImplementation "net.fabricmc:fabric-loader:${loader_version}"
+        modCompileOnly("com.terraformersmc:modmenu:${spec.modMenu}") { transitive = false }
     } else {
         implementation "net.fabricmc:fabric-loader:${loader_version}"
+        compileOnly("com.terraformersmc:modmenu:${spec.modMenu}") { transitive = false }
     }
 }
 
@@ -55,4 +65,45 @@ tasks.withType(AbstractArchiveTask).configureEach {
 jar {
     from('LICENSE')
     from('LICENSE-LUCIDE')
+}
+
+sourceSets {
+    main {
+        java.srcDir('src/fabric/java')
+        java.srcDir(legacy ? 'src/fabricLegacy/java' : 'src/fabricModern/java')
+    }
+    regression {
+        compileClasspath += main.compileClasspath + main.output
+        java.srcDir(target == '1.20.x' ? 'src/regression120/java' : 'src/regressionModern/java')
+    }
+}
+
+def regressionJar = tasks.register('regressionJar', Jar) {
+    from(sourceSets.regression.output)
+    archiveClassifier = 'regression'
+    destinationDirectory = layout.buildDirectory.dir('regression')
+}
+
+def regressionMod = legacy ? tasks.register('remapRegressionJar', net.fabricmc.loom.task.RemapJarTask) {
+    inputFile = regressionJar.flatMap { it.archiveFile }
+    classpath.from(sourceSets.regression.compileClasspath)
+    archiveClassifier = 'regression-remapped'
+    destinationDirectory = layout.buildDirectory.dir('regression')
+} : regressionJar
+
+def distributionJar = tasks.named(legacy ? 'remapJar' : 'jar', AbstractArchiveTask)
+tasks.register('fontGuardRegression', net.fabricmc.loom.task.prod.ClientProductionRunTask) {
+    group = 'verification'
+    description = 'Verify resource-pack font loading through the packaged mod in production Fabric.'
+    // The test exits during pre-launch, before Minecraft requests the asset index or starts rendering.
+    setDependsOn([])
+    useXVFB = false
+    runDir = layout.buildDirectory.dir("regression/run-${target}")
+    if (target == '1.20.x') {
+        javaLauncher = javaToolchains.launcherFor {
+            languageVersion = JavaLanguageVersion.of(spec.java)
+        }
+    }
+    jvmArgs.addAll('-Djava.awt.headless=true', '--enable-native-access=ALL-UNNAMED')
+    mods.from(distributionJar.flatMap { it.archiveFile }, regressionMod.flatMap { it.archiveFile })
 }

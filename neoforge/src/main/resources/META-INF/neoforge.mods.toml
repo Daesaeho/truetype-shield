@@ -1,0 +1,29 @@
+modLoader = "javafml"
+loaderVersion = "[1,)"
+license = "All Rights Reserved"
+issueTrackerURL = "https://github.com/Daesaeho/truetype-shield/issues"
+
+[[mods]]
+modId = "truetype_shield"
+version = "${modVersion}"
+displayName = "TrueType Shield"
+displayURL = "https://github.com/Daesaeho/truetype-shield"
+logoFile = "assets/truetype_shield/icon.png"
+description = "Blocks the vanilla TrueType resource-pack font provider and scans installed local packs."
+
+[[mixins]]
+config = "truetype_shield.mixins.json"
+
+[[dependencies.truetype_shield]]
+modId = "neoforge"
+type = "required"
+versionRange = "${neoLoader}"
+ordering = "NONE"
+side = "CLIENT"
+
+[[dependencies.truetype_shield]]
+modId = "minecraft"
+type = "required"
+versionRange = "${minecraftVersions}"
+ordering = "NONE"
+side = "CLIENT"

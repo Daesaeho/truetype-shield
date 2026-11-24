@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "truetype_shield_regression",
+  "version": "1.0.0",
+  "name": "TrueType Shield regression test",
+  "environment": "client",
+  "entrypoints": {
+    "preLaunch": ["io.github.daesaeho.truetypeshield.regression.FontProviderRegression"]
+  },
+  "depends": {
+    "truetype_shield": "*"
+  }
+}

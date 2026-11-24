@@ -12,6 +12,10 @@
     "issues": "https://github.com/Daesaeho/truetype-shield/issues"
   },
   "mixins": ["truetype_shield.mixins.json"],
+  "entrypoints": {
+    "client": ["io.github.daesaeho.truetypeshield.client.ShieldFabricClient"],
+    "modmenu": ["io.github.daesaeho.truetypeshield.client.ShieldModMenu"]
+  },
   "depends": {
     "fabricloader": ">=${loaderVersion}",
     "minecraft": ["${minecraftVersions}"],
