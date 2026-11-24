@@ -5,22 +5,22 @@ plugins {
 
 def target = providers.gradleProperty('target').getOrElse('26.x')
 def targets = [
-    '1.21.11': [java: 21, versions: ['1.21.11']],
-    '26.x': [java: 25, versions: ['26.1', '26.1.1', '26.1.2', '26.2', '26.3', '26.4-pre.1']]
+    '1.21.x': [java: 21, compileVersion: '1.21.11', versions: ['1.21'] + (1..11).collect { "1.21.${it}" }],
+    '26.x': [java: 25, compileVersion: '26.1', versions: ['26.1', '26.1.1', '26.1.2', '26.2', '26.3', '26.4-pre.1']]
 ]
 if (!targets.containsKey(target)) {
-    throw new GradleException("Unknown target '${target}'. Use 1.21.11 or 26.x.")
+    throw new GradleException("Unknown target '${target}'. Use 1.21.x or 26.x.")
 }
 
 def spec = targets[target]
-def legacy = target == '1.21.11'
+def legacy = target == '1.21.x'
 apply plugin: legacy ? 'net.fabricmc.fabric-loom-remap' : 'net.fabricmc.fabric-loom'
 
 group = 'io.github.daesaeho'
 version = "${mod_version}+${target}"
 
 dependencies {
-    minecraft "com.mojang:minecraft:${spec.versions.first()}"
+    minecraft "com.mojang:minecraft:${spec.compileVersion}"
     if (legacy) {
         mappings loom.officialMojangMappings()
         modImplementation "net.fabricmc:fabric-loader:${loader_version}"
