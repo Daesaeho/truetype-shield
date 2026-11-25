@@ -156,11 +156,11 @@ public final class PackScanner {
             }
             if (path.endsWith(".json") && isFontAsset(path)) {
                 try {
-                    var targets = readDeclarations(budget.read(asset.getValue(), MAX_MANIFEST_BYTES),
-                        path.split("/", 4)[1]);
-                    declarations += targets.size();
-                    candidateNames.addAll(targets);
-                } catch (IOException | IllegalStateException error) {
+                    var manifest = readDeclarations(budget.read(asset.getValue(), MAX_MANIFEST_BYTES));
+                    declarations += manifest.count();
+                    candidateNames.addAll(manifest.targets());
+                    incomplete |= manifest.incomplete();
+                } catch (IOException error) {
                     incomplete = true;
                 }
             }
@@ -198,8 +198,10 @@ public final class PackScanner {
             && FONT_EXTENSIONS.contains(path.substring(dot + 1).toLowerCase(Locale.ROOT));
     }
 
-    private static List<String> readDeclarations(byte[] json, String manifestNamespace) throws IOException {
+    private static DeclarationScan readDeclarations(byte[] json) {
         var targets = new ArrayList<String>();
+        int count = 0;
+        boolean incomplete = false;
         try (var reader = new JsonReader(new InputStreamReader(new ByteArrayInputStream(json), StandardCharsets.UTF_8))) {
             reader.beginObject();
             while (reader.hasNext()) {
@@ -209,44 +211,66 @@ public final class PackScanner {
                 }
                 reader.beginArray();
                 while (reader.hasNext()) {
-                    String target = readProvider(reader, manifestNamespace);
-                    if (target != null) {
-                        targets.add(target);
+                    if (reader.peek() != JsonToken.BEGIN_OBJECT) {
+                        reader.skipValue();
+                        incomplete = true;
+                        continue;
+                    }
+                    var provider = readProvider(reader);
+                    if (provider.type() == null) {
+                        incomplete = true;
+                    } else if (provider.type().equals("ttf") || provider.type().equals("minecraft:ttf")) {
+                        count++;
+                        String target = fontPath(provider.file());
+                        if (target == null) {
+                            incomplete = true;
+                        } else {
+                            targets.add(target);
+                        }
                     }
                 }
                 reader.endArray();
             }
             reader.endObject();
-            if (reader.peek() != JsonToken.END_DOCUMENT) {
-                throw new IOException("Unexpected data after font manifest");
-            }
+            incomplete |= reader.peek() != JsonToken.END_DOCUMENT;
+        } catch (IOException | IllegalStateException error) {
+            incomplete = true;
         }
-        return targets;
+        return new DeclarationScan(count, targets, incomplete);
     }
 
-    private static String readProvider(JsonReader reader, String manifestNamespace) throws IOException {
-        String type = "";
-        String file = "";
+    private static Provider readProvider(JsonReader reader) throws IOException {
+        String type = null;
+        String file = null;
         reader.beginObject();
         while (reader.hasNext()) {
-            String key = reader.nextName();
-            if (key.equals("type")) {
-                type = reader.nextString();
-            } else if (key.equals("file") && reader.peek() == JsonToken.STRING) {
-                file = reader.nextString();
-            } else {
-                reader.skipValue();
+            switch (reader.nextName()) {
+                case "type" -> type = readString(reader);
+                case "file" -> file = readString(reader);
+                default -> reader.skipValue();
             }
         }
         reader.endObject();
-        if (!type.equals("ttf") && !type.equals("minecraft:ttf")) {
+        return new Provider(type, file);
+    }
+
+    private static String readString(JsonReader reader) throws IOException {
+        if (reader.peek() == JsonToken.STRING) {
+            return reader.nextString();
+        }
+        reader.skipValue();
+        return null;
+    }
+
+    private static String fontPath(String file) {
+        if (file == null) {
             return null;
         }
         int separator = file.indexOf(':');
         String namespace = separator < 0 ? "minecraft" : file.substring(0, separator);
         String path = file.substring(separator + 1);
-        if (file.isEmpty() || namespace.isEmpty() || path.isEmpty()) {
-            return "assets/" + manifestNamespace + "/font/";
+        if (namespace.isEmpty() || path.isEmpty()) {
+            return null;
         }
         // Use the resource as an index key only. No archive member is extracted or resolved on disk.
         return "assets/" + namespace + "/font/" + path;
@@ -282,6 +306,10 @@ public final class PackScanner {
     }
 
     private record Entry(long size, Opener opener) {}
+
+    private record Provider(String type, String file) {}
+
+    private record DeclarationScan(int count, List<String> targets, boolean incomplete) {}
 
     private static final class ReadBudget {
         private int remaining = MAX_READ_BYTES;
